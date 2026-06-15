@@ -3,30 +3,29 @@ const cors = require('cors');
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');  // ← Changement ici : bcryptjs au lieu de bcrypt
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuration CORS corrigée
+// Configuration CORS
 const allowedOrigins = [
     'https://caleb-irri.webflow.io',
-    'https://www.calebirri.com',  // Ajoutez votre domaine futur
+    'https://www.jensuisclic.com',
+    'http://localhost:3000',
+    'http://localhost:5500'
 ];
 
 app.use(cors({
     origin: function(origin, callback) {
-        // Permettre les requêtes sans origine (comme les appels API directs)
         if (!origin) return callback(null, true);
-        
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            console.log('Origine bloquée par CORS:', origin);
-            callback(null, true); // Temporaire: autorise toutes les origines pour tester
-            // callback(new Error('CORS non autorisé'));
+            callback(null, true); // Temporaire pour les tests
         }
     },
-    credentials: true,  // Important pour les cookies/sessions
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     exposedHeaders: ['Set-Cookie']
@@ -64,9 +63,9 @@ async function fileExists(filePath) {
     }
 }
 
-// Middleware pour logger les requêtes (debug)
+// Middleware pour logger les requêtes
 app.use((req, res, next) => {
-    console.log(`${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+    console.log(`${req.method} ${req.url}`);
     next();
 });
 
@@ -147,21 +146,24 @@ app.post('/api/register', async (req, res) => {
             return res.status(400).json({ error: 'Email déjà utilisé' });
         }
         
-        // Version simplifiée sans email pour tester
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // Hash du mot de passe avec bcryptjs
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
         
-        users.push({
+        const newUser = {
             id: crypto.randomBytes(16).toString('hex'),
             pseudo,
             email,
             password: hashedPassword,
             createdAt: new Date().toISOString()
-        });
+        };
         
+        users.push(newUser);
         await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
         
         res.json({ message: 'Inscription réussie' });
     } catch (error) {
+        console.error('Erreur inscription:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -176,6 +178,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ error: 'Identifiants incorrects' });
         }
         
+        // Vérification du mot de passe avec bcryptjs
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
             return res.status(401).json({ error: 'Identifiants incorrects' });
@@ -186,12 +189,12 @@ app.post('/api/login', async (req, res) => {
             user: { pseudo: user.pseudo, email: user.email, id: user.id }
         });
     } catch (error) {
+        console.error('Erreur login:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
 app.get('/api/check-auth', async (req, res) => {
-    // Version simplifiée - à améliorer avec des tokens JWT
     res.json({ user: null });
 });
 
@@ -199,11 +202,11 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'JenSuisClic API fonctionne !' });
 });
 
-// Route OPTIONS pour CORS preflight
 app.options('*', cors());
 
 // Démarrage du serveur
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`Serveur démarré sur le port ${PORT}`);
-    initDataFiles();
+    await initDataFiles();
+    console.log('Fichiers de données initialisés');
 });
