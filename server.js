@@ -1,3 +1,31 @@
+const nodemailer = require('nodemailer');
+
+// Configuration Gmail - À MODIFIER AVEC TES VRAIES INFOS
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'calebirri@gmail.com',     // ← TON ADRESSE GMAIL
+        pass: 'vjyd izra cjzq lser'        // ← LE MOT DE PASSE D'APPLICATION (avec les espaces)
+    }
+});
+
+// Dans la route /api/register, pour envoyer l'email :
+try {
+    await transporter.sendMail({
+        from: '"JenSuisClic" <calebirri@gmail.com>',  // ← MÊME ADRESSE GMAIL
+        to: email,  // L'email de la personne qui s'inscrit
+        subject: '✅ Bienvenue sur JenSuisClic !',
+        html: `
+            <h1>Bienvenue ${pseudo} !</h1>
+            <p>Vous êtes inscrit sur JenSuisClic</p>
+            <p>Connectez-vous : https://www.calebirri.com/jensuisclic</p>
+        `
+    });
+    console.log('✅ Email envoyé à ' + email);
+} catch (emailError) {
+    console.error('❌ Erreur envoi email:', emailError);
+}
+
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs').promises;
@@ -11,7 +39,7 @@ const PORT = process.env.PORT || 3000;
 // Configuration CORS
 const allowedOrigins = [
     'https://caleb-irri.webflow.io',
-    'https://www.jensuisclic.com',
+    'https://caleb-irri.com',
     'http://localhost:3000',
     'http://localhost:5500'
 ];
