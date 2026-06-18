@@ -40,6 +40,7 @@ const PORT = process.env.PORT || 3000;
 const allowedOrigins = [
     'https://caleb-irri.webflow.io',
     'https://caleb-irri.com',
+    'https://www.jensuisclic.com',
     'http://localhost:3000',
     'http://localhost:5500'
 ];
